@@ -286,8 +286,7 @@ def generate_launch_description():
     rviz_node = Node(
         package='rviz2',
         executable='rviz2',
-        arguments=['-d', LaunchConfiguration('rvizconfig')],
-        required=True
+        arguments=['-d', LaunchConfiguration('rvizconfig')]
     )
 
     return LaunchDescription([

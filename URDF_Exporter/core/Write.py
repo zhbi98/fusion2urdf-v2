@@ -128,11 +128,10 @@ def write_urdf(joints_dict, links_xyz_dict, inertial_dict, package_name, robot_n
         f.write('<?xml version="1.0" ?>\n')
         f.write('<robot name="{}" xmlns:xacro="http://www.ros.org/wiki/xacro">\n'.format(robot_name))
         f.write('\n')
-        f.write('<xacro:include filename="$(find {})/urdf/materials.xacro" />'.format(package_name))
-        f.write('\n')
-        f.write('<xacro:include filename="$(find {})/urdf/{}.trans" />'.format(package_name, robot_name))
-        f.write('\n')
-        f.write('<xacro:include filename="$(find {})/urdf/{}.gazebo" />'.format(package_name, robot_name))
+        # ROS2: use relative paths so xacro resolves from same directory when launch passes full path
+        f.write('<xacro:include filename="materials.xacro" />\n')
+        f.write('<xacro:include filename="{}.trans" />\n'.format(robot_name))
+        f.write('<xacro:include filename="{}.gazebo" />\n'.format(robot_name))
         f.write('\n')
 
     write_link_urdf(joints_dict, repo, links_xyz_dict, file_name, inertial_dict)
@@ -221,7 +220,7 @@ def write_gazebo_xacro(joints_dict, links_xyz_dict, inertial_dict, package_name,
 
         gazebo = Element('gazebo')
         plugin = SubElement(gazebo, 'plugin')
-        plugin.attrib = {'name':'control', 'filename':'libgazebo_ros_control.so'}
+        plugin.attrib = {'name':'control', 'filename':'libgazebo_ros2_control.so'}
         gazebo_xml = "\n".join(utils.prettify(gazebo).split("\n")[1:])
         f.write(gazebo_xml)
 
@@ -250,191 +249,170 @@ def write_gazebo_xacro(joints_dict, links_xyz_dict, inertial_dict, package_name,
 
 def write_display_launch(package_name, robot_name, save_dir):
     """
-    write display launch file "save_dir/launch/display.launch"
-
-
-    Parameter
-    ---------
-    robot_name: str
-    name of the robot
-    save_dir: str
-    path of the repository to save
-    """   
+    Write ROS2 display launch file "save_dir/launch/display_launch.py"
+    """
     try: os.mkdir(save_dir + '/launch')
-    except: pass     
+    except: pass
 
-    launch = Element('launch')     
+    file_name = save_dir + '/launch/display_launch.py'
+    content = '''# ROS2 launch file for displaying URDF in RViz2
+import os
+from ament_index_python.packages import get_package_share_directory
+from launch import LaunchDescription
+from launch.actions import DeclareLaunchArgument
+from launch.substitutions import Command, LaunchConfiguration
+from launch_ros.actions import Node
 
-    arg1 = SubElement(launch, 'arg')
-    arg1.attrib = {'name':'model', 'default':'$(find {})/urdf/{}.xacro'.format(package_name, robot_name)}
 
-    arg2 = SubElement(launch, 'arg')
-    arg2.attrib = {'name':'gui', 'default':'true'}
+def generate_launch_description():
+    pkg_share = get_package_share_directory('{package_name}')
+    default_model = os.path.join(pkg_share, 'urdf', '{robot_name}.xacro')
+    default_rviz = os.path.join(pkg_share, 'launch', 'urdf.rviz')
 
-    arg3 = SubElement(launch, 'arg')
-    arg3.attrib = {'name':'rvizconfig', 'default':'$(find {})/launch/urdf.rviz'.format(package_name)}
+    model_arg = DeclareLaunchArgument(name='model', default_value=default_model, description='Path to robot xacro')
+    rvizconfig_arg = DeclareLaunchArgument(name='rvizconfig', default_value=default_rviz, description='Path to rviz config')
 
-    param1 = SubElement(launch, 'param')
-    param1.attrib = {'name':'robot_description', 'command':'$(find xacro)/xacro $(arg model)'}
+    robot_description = Command(['xacro ', LaunchConfiguration('model')])
 
-    param2 = SubElement(launch, 'param')
-    param2.attrib = {'name':'use_gui', 'value':'$(arg gui)'}
+    robot_state_publisher_node = Node(
+        package='robot_state_publisher',
+        executable='robot_state_publisher',
+        parameters=[{{'robot_description': robot_description}}]
+    )
+    joint_state_publisher_node = Node(
+        package='joint_state_publisher_gui',
+        executable='joint_state_publisher_gui'
+    )
+    rviz_node = Node(
+        package='rviz2',
+        executable='rviz2',
+        arguments=['-d', LaunchConfiguration('rvizconfig')],
+        required=True
+    )
 
-    node1 = SubElement(launch, 'node')
-    node1.attrib = {'name':'joint_state_publisher_gui', 'pkg':'joint_state_publisher_gui', 'type':'joint_state_publisher_gui'}
-
-    node2 = SubElement(launch, 'node')
-    node2.attrib = {'name':'robot_state_publisher', 'pkg':'robot_state_publisher', 'type':'robot_state_publisher'}
-
-    node3 = SubElement(launch, 'node')
-    node3.attrib = {'name':'rviz', 'pkg':'rviz', 'args':'-d $(arg rvizconfig)', 'type':'rviz', 'required':'true'}
-
-    launch_xml = "\n".join(utils.prettify(launch).split("\n")[1:])        
-
-    file_name = save_dir + '/launch/display.launch'    
+    return LaunchDescription([
+        model_arg,
+        rvizconfig_arg,
+        robot_state_publisher_node,
+        joint_state_publisher_node,
+        rviz_node,
+    ])
+'''.format(package_name=package_name, robot_name=robot_name)
     with open(file_name, mode='w') as f:
-        f.write(launch_xml)
+        f.write(content)
 
 def write_gazebo_launch(package_name, robot_name, save_dir):
     """
-    write gazebo launch file "save_dir/launch/gazebo.launch"
-    
-    
-    Parameter
-    ---------
-    robot_name: str
-        name of the robot
-    save_dir: str
-        path of the repository to save
+    Write ROS2 Gazebo launch file "save_dir/launch/gazebo_launch.py"
     """
-    
     try: os.mkdir(save_dir + '/launch')
-    except: pass     
-    
-    launch = Element('launch')
-    param = SubElement(launch, 'param')
-    param.attrib = {'name':'robot_description', 'command':'$(find xacro)/xacro $(find {})/urdf/{}.xacro'.format(package_name, robot_name)}
+    except: pass
 
-    node = SubElement(launch, 'node')
-    node.attrib = {'name':'spawn_urdf', 'pkg':'gazebo_ros', 'type':'spawn_model',\
-                    'args':'-param robot_description -urdf -model {}'.format(robot_name)}
-
-    include_ =  SubElement(launch, 'include')
-    include_.attrib = {'file':'$(find gazebo_ros)/launch/empty_world.launch'}        
-    
-    number_of_args = 5
-    args = [None for i in range(number_of_args)]
-    args_name_value_pairs = [['paused', 'true'], ['use_sim_time', 'true'],
-                             ['gui', 'true'], ['headless', 'false'], 
-                             ['debug', 'false']]
-                             
-    for i, arg in enumerate(args):
-        arg = SubElement(include_, 'arg')
-        arg.attrib = {'name' : args_name_value_pairs[i][0] , 
-        'value' : args_name_value_pairs[i][1]}
+    file_name = save_dir + '/launch/gazebo_launch.py'
+    content = '''# ROS2 launch file for Gazebo simulation
+import os
+from ament_index_python.packages import get_package_share_directory
+from launch import LaunchDescription
+from launch.actions import ExecuteProcess, IncludeLaunchDescription
+from launch.launch_description_sources import PythonLaunchDescriptionSource
+from launch.substitutions import Command
+from launch_ros.actions import Node
 
 
-    
-    launch_xml = "\n".join(utils.prettify(launch).split("\n")[1:])        
-    
-    file_name = save_dir + '/launch/' + 'gazebo.launch'    
+def generate_launch_description():
+    pkg_share = get_package_share_directory('{package_name}')
+    xacro_path = os.path.join(pkg_share, 'urdf', '{robot_name}.xacro')
+    robot_description = Command(['xacro ', xacro_path])
+
+    gazebo_share = get_package_share_directory('gazebo_ros')
+    empty_world_launch = os.path.join(gazebo_share, 'launch', 'gazebo.launch.py')
+
+    gazebo = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(empty_world_launch),
+        launch_arguments={{'paused': 'true', 'use_sim_time': 'true', 'gui': 'true'}}.items()
+    )
+    robot_state_publisher = Node(
+        package='robot_state_publisher',
+        executable='robot_state_publisher',
+        parameters=[{{'robot_description': robot_description}}],
+        output='screen'
+    )
+    spawn_entity = Node(
+        package='gazebo_ros',
+        executable='spawn_entity.py',
+        arguments=['-entity', '{robot_name}'],
+        parameters=[{{'robot_description': robot_description}}],
+        output='screen'
+    )
+
+    return LaunchDescription([
+        gazebo,
+        robot_state_publisher,
+        spawn_entity,
+    ])
+'''.format(package_name=package_name, robot_name=robot_name)
     with open(file_name, mode='w') as f:
-        f.write(launch_xml)
+        f.write(content)
 
 
 def write_control_launch(package_name, robot_name, save_dir, joints_dict):
     """
-    write control launch file "save_dir/launch/controller.launch"
-    
-    
-    Parameter
-    ---------
-    robot_name: str
-        name of the robot
-    save_dir: str
-        path of the repository to save
-    joints_dict: dict
-        information of the joints
+    Write ROS2 control launch file "save_dir/launch/controller_launch.py"
     """
-    
     try: os.mkdir(save_dir + '/launch')
-    except: pass     
-    
-    #launch = Element('launch')
+    except: pass
 
-    controller_name = robot_name + '_controller'
-    #rosparam = SubElement(launch, 'rosparam')
-    #rosparam.attrib = {'file':'$(find {})/launch/controller.yaml'.format(package_name),
-    #                   'command':'load'}
-                       
-    controller_args_str = ""
-    for j in joints_dict:
-        joint_type = joints_dict[j]['type']
-        if joint_type != 'fixed':
-            controller_args_str += j + '_position_controller '
-    controller_args_str += 'joint_state_controller '
+    controller_list = ['joint_state_broadcaster']
+    if any(joints_dict[j]['type'] != 'fixed' for j in joints_dict):
+        controller_list.append('position_controller')
+    controller_args_py = ', '.join(repr(c) for c in controller_list)
 
-    node_controller = Element('node')
-    node_controller.attrib = {'name':'controller_spawner', 'pkg':'controller_manager', 'type':'spawner',\
-                    'respawn':'false', 'output':'screen', 'ns':robot_name,\
-                    'args':'{}'.format(controller_args_str)}
-    
-    node_publisher = Element('node')
-    node_publisher.attrib = {'name':'robot_state_publisher', 'pkg':'robot_state_publisher',\
-                    'type':'robot_state_publisher', 'respawn':'false', 'output':'screen'}
-    remap = SubElement(node_publisher, 'remap')
-    remap.attrib = {'from':'/joint_states',\
-                    'to':'/' + robot_name + '/joint_states'}
-    
-    #launch_xml  = "\n".join(utils.prettify(launch).split("\n")[1:])   
-    launch_xml  = "\n".join(utils.prettify(node_controller).split("\n")[1:])   
-    launch_xml += "\n".join(utils.prettify(node_publisher).split("\n")[1:])   
+    file_name = save_dir + '/launch/controller_launch.py'
+    content = '''# ROS2 launch file for ros2_control / gazebo_ros2_control
+import os
+from ament_index_python.packages import get_package_share_directory
+from launch import LaunchDescription
+from launch_ros.actions import Node
 
-    file_name = save_dir + '/launch/controller.launch'    
+
+def generate_launch_description():
+    return LaunchDescription([
+        Node(
+            package='controller_manager',
+            executable='spawner',
+            arguments=[{controller_args}],
+            output='screen',
+        ),
+    ])
+'''.format(package_name=package_name, robot_name=robot_name,
+           controller_args=controller_args_py)
     with open(file_name, mode='w') as f:
-        f.write('<launch>\n')
-        f.write('\n')
-        #for some reason ROS is very picky about the attribute ordering, so we'll bitbang this element
-        f.write('<rosparam file="$(find {})/launch/controller.yaml" command="load"/>'.format(package_name))
-        f.write('\n')
-        f.write(launch_xml)
-        f.write('\n')
-        f.write('</launch>')
+        f.write(content)
         
 
 def write_yaml(package_name, robot_name, save_dir, joints_dict):
     """
-    write yaml file "save_dir/launch/controller.yaml"
-    
-    
-    Parameter
-    ---------
-    robot_name: str
-        name of the robot
-    save_dir: str
-        path of the repository to save
-    joints_dict: dict
-        information of the joints
+    Write ROS2 ros2_control controller config "save_dir/config/controller.yaml"
     """
-    try: os.mkdir(save_dir + '/launch')
-    except: pass 
+    try: os.mkdir(save_dir + '/config')
+    except: pass
 
-    controller_name = robot_name + '_controller'
-    file_name = save_dir + '/launch/controller.yaml'
+    file_name = save_dir + '/config/controller.yaml'
+    joint_names = [j for j in joints_dict if joints_dict[j]['type'] != 'fixed']
     with open(file_name, 'w') as f:
-        f.write(controller_name + ':\n')
-        # joint_state_controller
-        f.write('  # Publish all joint states -----------------------------------\n')
-        f.write('  joint_state_controller:\n')
-        f.write('    type: joint_state_controller/JointStateController\n')  
-        f.write('    publish_rate: 50\n\n')
-        # position_controllers
-        f.write('  # Position Controllers --------------------------------------\n')
-        for joint in joints_dict:
-            joint_type = joints_dict[joint]['type']
-            if joint_type != 'fixed':
-                f.write('  ' + joint + '_position_controller:\n')
-                f.write('    type: effort_controllers/JointPositionController\n')
-                f.write('    joint: '+ joint + '\n')
-                f.write('    pid: {p: 100.0, i: 0.01, d: 10.0}\n')
+        f.write('# ROS2 ros2_control controller config (used with gazebo_ros2_control)\n')
+        f.write('controller_manager:\n')
+        f.write('  ros__parameters:\n')
+        f.write('    update_rate: 100  # Hz\n')
+        f.write('\n')
+        f.write('    joint_state_broadcaster:\n')
+        f.write('      type: joint_state_broadcaster/JointStateBroadcaster\n')
+        f.write('\n')
+        if joint_names:
+            f.write('    position_controller:\n')
+            f.write('      type: position_controllers/JointGroupPositionController\n')
+            f.write('      joints:\n')
+            for j in joint_names:
+                f.write('        - {}\n'.format(j))
+        f.write('\n')
 

@@ -174,9 +174,9 @@ def update_package_xml(save_dir, package_name):
     file_name = save_dir + '/package.xml'
 
     for line in fileinput.input(file_name, inplace=True):
-        if '<name>' in line:
+        if '<name>' in line and '</name>' in line:
             sys.stdout.write("  <name>" + package_name + "</name>\n")
         elif '<description>' in line:
-            sys.stdout.write("<description>The " + package_name + " package</description>\n")
+            sys.stdout.write("  <description>The " + package_name + " package (ROS2, exported from Fusion 360)</description>\n")
         else:
             sys.stdout.write(line)

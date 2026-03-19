@@ -3,27 +3,41 @@
 This is a **fork** of the original [syuntoku14/fusion2urdf](https://github.com/syuntoku14/fusion2urdf) repository. 
 
 ## **Changes Made**
+
 - **Python 3.12 Compatibility**: Replaced the deprecated `distutils.dir_util` with `shutil` for directory operations, ensuring compatibility with **Python 3.12** used by Fusion 360.
 - **Error Handling**: Improved error handling to prevent `FileExistsError` when copying directories if they already exist.
 - **Directory Operations**: All directory copying is now done using `shutil.copytree`.
 
 ## **Notes**
+
 - The script is updated for use with **Python 3.12**, as Fusion 360 no longer supports `distutils` in versions above Python 3.10.
 
 ---
 
-
-
 ## Updated!!!
+
+- 2026/0319:Will migrate to Fusion:v.2606.1.36, and ROS2
+  
+  * Modify the Write.py file to adapt to the ROS2 xacro file format
+  
+  * The delete Node function does not support the `required` parameter
+  
+  * Replace the ROS1 `rviz_class_name` in urdf.rviz with the ROS2 `rviz_default_plugins/`
+  
+  * Use RViz2 to regenerate a urdf belonging to ROS2 with a new rviz configuration
 * 2021/01/09: Fix xyz calculation. 
+  
   * If you see that your components move arround the map center in rviz try this update 
   * More Infos see: https://forums.autodesk.com/t5/fusion-360-api-and-scripts/difference-of-geometryororiginone-and-geometryororiginonetwo/m-p/9837767
 
 * 2020/11/10: README fix
+  
   * MacOS Installation command fixed in README
   * Date format unified in README to yyyy/dd/mm
   * Shifted Installation Upwards for better User Experience and easier to find
+
 * 2020/01/04: Multiple updates:
+  
   * no longer a need to run a bash script to convert stls
   * some cleanup around joint and transmission generation
   * defines a sample material tag instead of defining a material in each link
@@ -31,10 +45,12 @@ This is a **fork** of the original [syuntoku14/fusion2urdf](https://github.com/s
   * now launched by roslaunch {robot_name}_description display.launch
   * changed fusion2urdf output from urdf to xacro for more flexibility
   * separate out material, transmissions, gazebo elements to separate files
-* 2018/20/10: Fixed functions to generate launch files
-* 2018/25/09: Supports joint types "Rigid", "Slider" & Supports the joints' limit(for "Revolute" and "Slider"). 
-* 2018/19/09: Fixed the bugs about the center of the mass and the inertia.
 
+* 2018/20/10: Fixed functions to generate launch files
+
+* 2018/25/09: Supports joint types "Rigid", "Slider" & Supports the joints' limit(for "Revolute" and "Slider"). 
+
+* 2018/19/09: Fixed the bugs about the center of the mass and the inertia.
 
 ## Installation
 
@@ -55,31 +71,37 @@ cp -r ./URDF_Exporter "$HOME/Library/Application Support/Autodesk/Autodesk Fusio
 ```
 
 ## What is this script?
+
 This is a fusion 360 script to export urdf from fusion 360 directly.
 
 This exports:
+
 * .urdf file of your model
 * .launch and .yaml files to simulate your robot on gazebo
 * .stl files of your model
 
-### Sample 
+### Sample
 
 The following test model doesn't stand upright because the z axis is not upright in default fusion 360.
 Make sure z axis is upright in your fusion 360 model if you want. 
 
 #### original model
+
 <img src="https://github.com/syuntoku14/fusion2urdf/blob/images/industrial_robot.png" alt="industrial_robot" title="industrial_robot" width="300" height="300">
 
 #### Gazebo simulation of exported .urdf and .launch
+
 * center of mass
-<img src="https://github.com/syuntoku14/fusion2urdf/blob/images/center_of_mass.png" alt="center_of_mass" title="center_of_mass" width="300" height="300">
+  
+  <img src="https://github.com/syuntoku14/fusion2urdf/blob/images/center_of_mass.png" alt="center_of_mass" title="center_of_mass" width="300" height="300">
 
 * collision
-<img src="https://github.com/syuntoku14/fusion2urdf/blob/images/collision.png" alt="collision" title="collision" width="300" height="300">
+  
+  <img src="https://github.com/syuntoku14/fusion2urdf/blob/images/collision.png" alt="collision" title="collision" width="300" height="300">
 
 * inertia
-<img src="https://github.com/syuntoku14/fusion2urdf/blob/images/inertia.png" alt="inertia" title="inertia" width="300" height="300">
-
+  
+  <img src="https://github.com/syuntoku14/fusion2urdf/blob/images/inertia.png" alt="inertia" title="inertia" width="300" height="300">
 
 ## Before using this script
 
@@ -101,7 +123,6 @@ but this doesn't work since the "face (3):1" component contains other components
 Sometimes this script exports abnormal urdf without any error messages. In that case, the joints should have problems. Redefine the joints and run again.
 
 In addition to that, make sure that this script currently supports only "Rigid", "Slider" and "Revolute".
-
 
 ## Complex Kinematic Loops and Spherical joints (may be fixed later):
 
@@ -126,9 +147,7 @@ Below you can see one of the cylinders is mismatched as compared to the others (
 
 See Also: Similar to this issue, but only for a few axes [here](https://github.com/yanshil/Fusion2PyBullet/issues/6) (turns out there was a fusion API change back then, and the exporter wasn't yet updated [See this commit](https://github.com/syuntoku14/fusion2urdf/commit/8786e6318cdcaaf32070148451a27ab6e4f6697d), but it now is)
 
-
 **The fix for this is to leave Fusion's joint controls unedited and form joints for the robot joints (See below)**
-
 
 A similar issue with another set of joints at the ankle was fixed by following the above fromat. [Here is the video](https://www.youtube.com/watch?v=0hfkm7vv5o8&ab_channel=JRohit)
 
@@ -137,19 +156,16 @@ The ankle joint below has 4 spherical joints and only two of them were defined a
 
 ![youtube-video-gif](https://user-images.githubusercontent.com/37873142/133144404-45d9e444-8ddb-4b5f-8970-6e637b750faa.gif)
 
-
 ## In some cases, before export Turn off "Capture design history"
 
 For preplanning the component placement when working/assembling your own robot. It is recomended to have separate names for components and save individual components in a separate folder, create a back up and, break link with the original. This folder can be later deleted after genearating the urdf. See [Issue #51](https://github.com/syuntoku14/fusion2urdf/issues/51) for problem with "copy-paste" vs "copy-paste new".
-
-
 
 ## How to use
 
 As an example, I'll export a urdf file from this cool fusion360 robot-arm model(https://grabcad.com/library/industrial-robot-10).
 This was created by [sanket patil](https://grabcad.com/sanket.patil-16)
 
-### Install in Shell 
+### Install in Shell
 
 Run the [installation command](#installation) in your shell.
 
@@ -180,7 +196,6 @@ You have successfully exported the urdf file. Also, you got `.stl` files in the 
 
 The folder "Desktop/test" will be required in the next step. Move them into your ros environment.
 
-
 #### In your ROS environment
 
 Place the generated _description package directory in your own ROS workspace. "catkin_ws" is used in this example.
@@ -201,13 +216,12 @@ roslaunch (whatever your robot_name is)_description display.launch
 <img src="https://github.com/syuntoku14/fusion2urdf/blob/images/rviz_robot.png" alt="rviz" title="rviz" width="300" height="300">
 
 If you want to simulate your robot on gazebo, just run
+
 ```bash
 roslaunch (whatever your robot_name is)_description gazebo.launch
 ```
 
 **Enjoy your Fusion 360 and ROS life!**
-
-
 
 # Citation
 

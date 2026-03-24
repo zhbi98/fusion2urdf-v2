@@ -61,9 +61,16 @@ class Joint:
         if self.type == 'revolute' or self.type == 'prismatic':
             limit = SubElement(joint, 'limit')
             limit.attrib = {'upper': str(self.upper_limit), 'lower': str(self.lower_limit),
-                            'effort': '100', 'velocity': '100'}
+                            'effort': '100.0', 'velocity': '100.0'}
             
         self.joint_xml = "\n".join(utils.prettify(joint).split("\n")[1:])
+
+        '''
+        创建的关节限制参数为整形，MoveIt Setup Assistant 按照这个整形写入joint_limits.yaml文件，
+        但是MoveIt2严格要求max_velocity和max_acceleration是double浮点数。
+        但是YAML文件写的是整数 100 而不是 100.0，YAML解析器会把它标记为int型。ROS2发现类型不匹配，
+        拒绝自动转换并抛出XML_ERROR_EMPTY_DOCUMENT异常。
+        '''
 
     def make_transmission_xml(self):
         """

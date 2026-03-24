@@ -105,6 +105,12 @@ Make sure z axis is upright in your fusion 360 model if you want.
 
 ## Before using this script
 
+在使用此脚本进行转换之前，第一步需要做的就是简化简化模型（link连杆）。在 fusion360 中可以使用合并实体的方式将多个零件中的多个实体（保持关节部分活动即可，其余复杂细合并/删除）通过布尔运算合并为一个大的实体，再把零部件使用 "联接" 装配起来，然后把基准参考零部件的名称重命名为 "base_link"。
+
+> 在定义关节时将 "base_link" 定义为 Component1 时 **父链接** 应设置为Component2，否则会出现 “KeyError: base_link__1” 错误。
+> 
+> 没有定义 "base_link" 或没有使用"联接" 装配运行脚本无法转换或无反应。
+
 Before using this script, make sure that your model has all the "links" as components. You have to define the links by creating corresiponding components. For example, this model(https://grabcad.com/library/spotmini-robot-1) is not supported unless you define the "base_link". 
 
 In addition to that, you should be careful when define your joints. The **parent links** should be set as **Component2** when you define the joint, not as Component1. For example, if you define the "base_link" as Component1 when you define the joints, an error saying "KeyError: base_link__1" will show up.

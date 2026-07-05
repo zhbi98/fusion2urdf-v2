@@ -79,6 +79,8 @@ This exports:
 * .urdf file of your model
 * .launch and .yaml files to simulate your robot on gazebo
 * .stl files of your model
+* 注意实际导出的文件是 .xacro 后缀，虽然是 .xacro 后缀，
+  但它只是一个 .xacro 文件格式的 URDF（主体内容是普通 URDF），而不是大量参数化、宏封装后的 xacro 写法。
 
 ### Sample
 
